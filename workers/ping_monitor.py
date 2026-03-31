@@ -22,6 +22,8 @@ class PingMonitor(QThread):
         self._password = password
         self._stop_flag = stop_flag
         self._consecutive: dict[str, int] = {ip: 0 for ip in DEVICES}
+        # sticky flag: once True it never resets; recovery after connectivity loss
+        # always emits Connectivity Restored, never Ping Restored
         self._ever_loss: dict[str, bool] = {ip: False for ip in DEVICES}
         self._ssh: paramiko.SSHClient | None = None
 
@@ -52,6 +54,7 @@ class PingMonitor(QThread):
             self.ping_loss_event.emit(ip, "Connectivity Loss", ts)
         elif count < _CONNECTIVITY_THRESHOLD:
             self.ping_loss_event.emit(ip, "Ping Loss", ts)
+        # counts above threshold emit nothing — device is already marked as lost
 
     def _handle_success(self, ip: str) -> None:
         prev = self._consecutive[ip]
@@ -79,19 +82,26 @@ class PingMonitor(QThread):
         if not self._connect_ssh(self._host, self._port,
                                   self._username, self._password):
             return
+        transport = self._ssh.get_transport()
+        if transport is None:
+            self.connection_event.emit("SSH Failed", "Transport unavailable", datetime.now())
+            return
         channels: list[paramiko.Channel] = []
         parsers: list[threading.Thread] = []
-        for ip in DEVICES:
-            chan = self._ssh.get_transport().open_session()
-            # Use getattr to call exec_command via a local reference
-            exec_fn = getattr(chan, "exec_command")
-            exec_fn(f"ping -O -i 0.2 {ip}")
-            channels.append(chan)
-            t = threading.Thread(
-                target=self._parse_channel, args=(ip, chan), daemon=True
-            )
-            parsers.append(t)
-            t.start()
-        for t in parsers:
-            t.join()
-        self._ssh.close()
+        try:
+            # Each parser thread is pinned to a unique IP key; no cross-thread key contention.
+            for ip in DEVICES:
+                chan = transport.open_session()
+                # Use getattr to call exec_command via a local reference
+                exec_fn = getattr(chan, "exec_command")
+                exec_fn(f"ping -O -i 0.2 {ip}")
+                channels.append(chan)
+                t = threading.Thread(
+                    target=self._parse_channel, args=(ip, chan), daemon=True
+                )
+                parsers.append(t)
+                t.start()
+            for t in parsers:
+                t.join()
+        finally:
+            self._ssh.close()

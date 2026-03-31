@@ -76,7 +76,6 @@ def test_consecutive_counter_resets_on_success():
 
 def test_ssh_failure_emits_connection_event():
     m = make_monitor()
-    m._emit_connection_event = MagicMock()
     with patch("workers.ping_monitor.paramiko.SSHClient") as mock_ssh:
         mock_ssh.return_value.connect.side_effect = Exception("refused")
         m._connect_ssh("192.168.1.1", 22, "user", "pass")
