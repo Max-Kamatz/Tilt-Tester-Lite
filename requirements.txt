@@ -1,0 +1,6 @@
+PyQt6
+paramiko
+openpyxl
+pytest
+pytest-qt
+pyinstaller
