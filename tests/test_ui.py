@@ -45,3 +45,10 @@ def test_device_tile_reset(app):
     assert tile._status == "OK"
     assert tile._ping_loss_count == 0
     assert tile._connectivity_loss_count == 0
+
+
+def test_device_tile_increment_connectivity_loss(app):
+    tile = DeviceTile("10.10.10.2")
+    tile.increment_connectivity_loss()
+    tile.increment_connectivity_loss()
+    assert tile._connectivity_loss_count == 2
