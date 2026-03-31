@@ -2,7 +2,6 @@
 import time
 import threading
 from datetime import datetime
-from typing import Callable
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -44,6 +43,7 @@ class TestOrchestrator(QThread):
     def run(self) -> None:
         tc = self._make_tilt_controller()
         if not tc.connect():
+            self.test_finished.emit("Connection failed")
             return
 
         self._emit("PTZ", "Test Start")
@@ -68,11 +68,7 @@ class TestOrchestrator(QThread):
                 self._emit("PTZ", "Cycle Complete", f"cycle={cycle}")
                 self.cycle_updated.emit(cycle, self._total_cycles)
 
-        if self._stop_flag.is_set():
-            reason = "User stopped" if not (cycle >= self._total_cycles) \
-                else "Cycle count reached"
-        else:
-            reason = "Cycle count reached"
+        reason = "Cycle count reached" if cycle >= self._total_cycles else "User stopped"
 
         self._emit("PTZ", "Test Stop", reason)
         tc.close()
