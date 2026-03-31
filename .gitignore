@@ -50,3 +50,6 @@ desktop.ini
 # Temp / logs
 *.tmp.csv
 *.log
+
+# Git worktrees
+.worktrees/
