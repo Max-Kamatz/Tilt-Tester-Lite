@@ -64,10 +64,16 @@ def test_event_log_adds_row(app):
 
 
 def test_event_log_cap_at_10000(app):
-    log = EventLog()
-    for i in range(10_001):
-        log.add_event(f"ts_{i}", "PTZ", "Cycle Complete", "")
-    assert log._table.rowCount() == 10_000
+    import ui.event_log as event_log_mod
+    original = event_log_mod._MAX_ROWS
+    event_log_mod._MAX_ROWS = 100
+    try:
+        log = EventLog()
+        for i in range(101):
+            log.add_event(f"ts_{i}", "PTZ", "Cycle Complete", "")
+        assert log._table.rowCount() == 100
+    finally:
+        event_log_mod._MAX_ROWS = original
 
 
 def test_event_log_colour_coded_row(app):
