@@ -88,3 +88,12 @@ def test_event_log_clear(app):
     log.add_event(*_ROW_DATA)
     log.clear()
     assert log._table.rowCount() == 0
+
+
+from ui.main_window import MainWindow
+
+def test_main_window_opens(app):
+    win = MainWindow()
+    win.show()
+    assert win.isVisible()
+    win.close()
