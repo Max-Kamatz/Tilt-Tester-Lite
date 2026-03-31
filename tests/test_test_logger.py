@@ -71,3 +71,30 @@ def test_export_excel(logger, tmp_path):
     ws = wb.active
     assert ws.cell(1, 1).value == "Timestamp"
     assert ws.cell(2, 3).value == "Ping Loss"
+
+
+def test_concurrent_writes_no_data_loss(tmp_path):
+    import threading
+    lg = TestLogger()
+    lg.start(dir=str(tmp_path))
+    num_threads = 5
+    writes_per_thread = 20
+
+    def write_events(thread_id):
+        for i in range(writes_per_thread):
+            ts = datetime(2026, 3, 31, 12, 0, i % 60)
+            lg.log(ts, f"Thread{thread_id}", f"Event{i}", "")
+
+    threads = [threading.Thread(target=write_events, args=(i,))
+               for i in range(num_threads)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    with open(lg.temp_path, newline="", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+
+    expected = 1 + num_threads * writes_per_thread  # header + 100 data rows
+    assert len(rows) == expected
+    lg.close()

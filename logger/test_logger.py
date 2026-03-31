@@ -3,6 +3,7 @@ import csv
 import os
 import shutil
 import tempfile
+import threading
 from datetime import datetime
 
 from openpyxl import Workbook
@@ -15,6 +16,7 @@ class TestLogger:
     def __init__(self):
         self.temp_path: str | None = None
         self._fd: int | None = None
+        self._write_lock = threading.Lock()
 
     def start(self, dir: str | None = None) -> None:
         self._fd, self.temp_path = tempfile.mkstemp(
@@ -29,9 +31,10 @@ class TestLogger:
             event_type: str, detail: str) -> None:
         ts_str = timestamp.strftime("%Y-%m-%d %H:%M:%S.") + \
                  f"{timestamp.microsecond // 1000:03d}"
-        with open(self.temp_path, "a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow([ts_str, source, event_type, detail])
+        with self._write_lock:
+            with open(self.temp_path, "a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow([ts_str, source, event_type, detail])
 
     def export_csv(self, path: str) -> None:
         shutil.copy2(self.temp_path, path)
