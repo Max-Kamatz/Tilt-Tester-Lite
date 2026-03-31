@@ -54,11 +54,11 @@ class MainWindow(QMainWindow):
         self._ip_field.setPlaceholderText("IP Address")
         self._ssh_port = QSpinBox(); self._ssh_port.setRange(1, 65535)
         self._ssh_port.setValue(22); self._ssh_port.setPrefix("SSH:")
-        self._ssh_user = QLineEdit("user"); self._ssh_user.setPlaceholderText("SSH User")
-        self._ssh_pass = QLineEdit(); self._ssh_pass.setPlaceholderText("SSH Pass")
+        self._ssh_user = QLineEdit("silentsentinel"); self._ssh_user.setPlaceholderText("SSH User")
+        self._ssh_pass = QLineEdit("Sentinel123"); self._ssh_pass.setPlaceholderText("SSH Pass")
         self._ssh_pass.setEchoMode(QLineEdit.EchoMode.Password)
         self._pelco_port = QSpinBox(); self._pelco_port.setRange(1, 65535)
-        self._pelco_port.setValue(6791); self._pelco_port.setPrefix("Pelco:")
+        self._pelco_port.setValue(34010); self._pelco_port.setPrefix("Pelco:")
         self._pelco_addr = QSpinBox(); self._pelco_addr.setRange(1, 255)
         self._pelco_addr.setValue(1); self._pelco_addr.setPrefix("Addr:")
         self._cycles_spin = QSpinBox(); self._cycles_spin.setRange(1, 99999)
@@ -190,6 +190,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(str)
     def _on_test_finished(self, reason: str) -> None:
+        self._stop_flag.set()
         self._status_label.setText("Complete")
         self._btn_stop.setEnabled(False)
         self._btn_start.setEnabled(True)

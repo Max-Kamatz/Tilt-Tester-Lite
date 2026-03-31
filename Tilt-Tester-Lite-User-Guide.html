@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tilt Tester Lite — User Guide</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm 20mm 18mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; font-size: 10.5pt; color: #1a1a1a; line-height: 1.55; margin: 0; }
+
+  /* Cover */
+  .cover { text-align: center; padding-top: 80px; page-break-after: always; }
+  .cover h1 { font-size: 28pt; margin-bottom: 6px; color: #1a1a1a; }
+  .cover .subtitle { font-size: 13pt; color: #555; margin-bottom: 40px; }
+  .cover .meta { font-size: 9.5pt; color: #888; margin-top: 60px; }
+  .cover hr { border: none; border-top: 2px solid #3277ff; width: 60%; margin: 30px auto; }
+
+  /* Headings */
+  h2 { font-size: 14pt; color: #1a1a1a; border-bottom: 1.5px solid #3277ff;
+       padding-bottom: 4px; margin-top: 28px; margin-bottom: 10px; }
+  h3 { font-size: 11pt; color: #1a1a1a; margin-top: 18px; margin-bottom: 6px; }
+
+  /* Body text */
+  p { margin: 0 0 8px 0; }
+  ul, ol { margin: 4px 0 10px 0; padding-left: 20px; }
+  li { margin-bottom: 3px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px 0; font-size: 9.5pt; }
+  th { background: #3277ff; color: #fff; padding: 6px 8px; text-align: left; }
+  td { padding: 5px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  tr:nth-child(even) td { background: #f5f7ff; }
+
+  /* Note / warning boxes */
+  .note { background: #eef3ff; border-left: 4px solid #3277ff;
+          padding: 8px 12px; margin: 10px 0; font-size: 9.5pt; }
+  .warn { background: #fff8e1; border-left: 4px solid #f0a500;
+          padding: 8px 12px; margin: 10px 0; font-size: 9.5pt; }
+
+  /* Inline code / field names */
+  code { background: #f0f0f0; border-radius: 3px; padding: 1px 4px;
+         font-family: Consolas, monospace; font-size: 9pt; }
+
+  /* Page break helpers */
+  .pb { page-break-before: always; }
+  .no-break { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ COVER -->
+<div class="cover">
+  <h1>Tilt Tester Lite</h1>
+  <div class="subtitle">PTZ Cable Stress Test Tool — User Guide</div>
+  <hr>
+  <p style="color:#555; font-size:11pt;">
+    Automated tilt cycle testing with live Moxa NPort connectivity monitoring
+  </p>
+  <div class="meta">
+    Version 1.0 &nbsp;|&nbsp; March 2026
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ 1. OVERVIEW -->
+<h2>1. Overview</h2>
+<p>
+  Tilt Tester Lite is a Windows desktop application designed to stress-test PTZ camera platform
+  cabling. It continuously cycles the platform tilt between &minus;90&deg; and +90&deg; via
+  Pelco-D over TCP while simultaneously monitoring the connectivity of up to four Moxa NPort
+  serial-to-Ethernet devices through SSH ping sessions on a GENE ARH6 Ubuntu board.
+  All events are logged in real time to a crash-safe CSV file.
+</p>
+
+<h3>Key Features</h3>
+<ul>
+  <li>Configurable tilt cycle count (1&nbsp;&ndash;&nbsp;99,999 cycles)</li>
+  <li>Live per-device connectivity tiles with ping loss and connectivity loss counters</li>
+  <li>Timestamped event log with 10,000-row capacity and auto-scroll</li>
+  <li>Automatic test stop when all four devices have experienced connectivity loss</li>
+  <li>Export log as CSV or Excel (.xlsx)</li>
+  <li>Crash-safe logging &mdash; data is preserved even if the application closes unexpectedly</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════ 2. SYSTEM REQUIREMENTS -->
+<h2>2. System Requirements</h2>
+<table>
+  <tr><th>Component</th><th>Requirement</th></tr>
+  <tr><td>Operating System</td><td>Windows 10 / 11 (64-bit)</td></tr>
+  <tr><td>PTZ Controller</td><td>Pelco-D compatible, TCP/IP accessible</td></tr>
+  <tr><td>Ping Host</td><td>GENE ARH6 board running Ubuntu 24.04 with SSH enabled</td></tr>
+  <tr><td>Monitored Devices</td><td>Moxa NPort devices at 10.10.10.2 &ndash; 10.10.10.5</td></tr>
+  <tr><td>Network</td><td>Operator PC must reach the GENE board and PTZ controller IP</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ 3. USER INTERFACE -->
+<h2 class="pb">3. User Interface</h2>
+
+<h3>3.1 Toolbar (top bar)</h3>
+<p>All configuration fields and control buttons are located in the toolbar across the top of the window.</p>
+
+<table>
+  <tr><th>Field / Button</th><th>Default</th><th>Description</th></tr>
+  <tr><td><code>IP Address</code></td><td>192.168.1.100</td><td>IP address of both the GENE board (SSH) and the PTZ controller (Pelco-D TCP)</td></tr>
+  <tr><td><code>SSH:</code> (port)</td><td>22</td><td>SSH port on the GENE board</td></tr>
+  <tr><td><code>SSH User</code></td><td>silentsentinel</td><td>SSH login username</td></tr>
+  <tr><td><code>SSH Pass</code></td><td>&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;</td><td>SSH login password (masked)</td></tr>
+  <tr><td><code>Pelco:</code> (port)</td><td>34010</td><td>TCP port for Pelco-D communication</td></tr>
+  <tr><td><code>Addr:</code></td><td>1</td><td>Pelco-D camera address (1&nbsp;&ndash;&nbsp;255)</td></tr>
+  <tr><td><code>Cycles:</code></td><td>100</td><td>Total number of tilt cycles to perform</td></tr>
+  <tr><td><b>Start</b></td><td>&mdash;</td><td>Begins the test with the current configuration</td></tr>
+  <tr><td><b>Stop</b></td><td>&mdash;</td><td>Immediately halts the test and closes all connections</td></tr>
+  <tr><td><b>Export</b></td><td>&mdash;</td><td>Saves the event log as CSV or Excel</td></tr>
+  <tr><td>Status label</td><td>Idle</td><td>Shows current state: Idle / Running&nbsp;&mdash;&nbsp;Cycle X / Y / Stopped / Complete</td></tr>
+</table>
+
+<h3>3.2 Device Tiles (left panel)</h3>
+<p>
+  One tile is displayed per monitored device (10.10.10.2 &ndash; 10.10.10.5). Each tile shows:
+</p>
+<ul>
+  <li><b>Status badge</b> &mdash; colour-coded current state of the device</li>
+  <li><b>Ping Loss counter</b> &mdash; number of individual missed ping replies</li>
+  <li><b>Connectivity Loss counter</b> &mdash; number of times the device reached the connectivity loss threshold</li>
+</ul>
+
+<table>
+  <tr><th>Badge State</th><th>Meaning</th></tr>
+  <tr><td>OK</td><td>Device is responding normally to pings</td></tr>
+  <tr><td>Ping Loss</td><td>One or more recent ping replies missed (below threshold)</td></tr>
+  <tr><td>Connectivity Loss</td><td>5 or more consecutive missed pings &mdash; device considered offline</td></tr>
+  <tr><td>Connectivity Restored</td><td>Device has recovered after a connectivity loss event</td></tr>
+</table>
+
+<h3>3.3 Event Log (right panel)</h3>
+<p>
+  Displays all test events in real time with timestamp, source, event type, and detail columns.
+  Rows are colour-coded by source. The log holds up to 10,000 rows; older rows are removed
+  automatically. Use the <b>Auto-scroll</b> checkbox to pin the view to the latest entry.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════ 4. RUNNING A TEST -->
+<h2 class="pb">4. Running a Test</h2>
+
+<h3>4.1 Before Starting</h3>
+<ol>
+  <li>Ensure the operator PC can reach the GENE board and PTZ controller on the configured IP.</li>
+  <li>Confirm the PTZ platform is free to move through its full tilt range.</li>
+  <li>Verify SSH credentials and Pelco-D port are correct in the toolbar.</li>
+  <li>Set the desired <code>Cycles:</code> count.</li>
+</ol>
+
+<h3>4.2 Starting the Test</h3>
+<p>Click <b>Start</b>. The application immediately:</p>
+<ul>
+  <li>Resets all device tile counters and clears the event log</li>
+  <li>Opens an SSH connection to the GENE board and launches four <code>ping</code> processes
+      (one per Moxa device at 200 ms intervals)</li>
+  <li>Opens a TCP connection to the PTZ controller on the Pelco port</li>
+  <li>Begins cycling the tilt between &minus;90&deg; and +90&deg;</li>
+</ul>
+
+<h3>4.3 Cycle Behaviour</h3>
+<p>Each cycle consists of:</p>
+<ol>
+  <li>Send absolute position command to &minus;90&deg; &rarr; wait 5 seconds</li>
+  <li>500 ms dwell</li>
+  <li>Send absolute position command to +90&deg; &rarr; wait 5 seconds</li>
+  <li>500 ms dwell</li>
+  <li>Log <b>Cycle Complete</b> and increment the cycle counter</li>
+</ol>
+<div class="note">
+  <b>Note:</b> The 5-second wait per move gives the platform sufficient time to complete the
+  full 180&deg; sweep (~3.5 seconds). <b>Position Reached</b> is logged after each wait
+  regardless of position feedback, as the PTZ controller does not respond to position
+  queries during movement execution.
+</div>
+
+<h3>4.4 Automatic Stop Conditions</h3>
+<p>The test stops automatically if any of the following occur:</p>
+<ul>
+  <li>The configured cycle count is reached</li>
+  <li>All four monitored devices (10.10.10.2&nbsp;&ndash;&nbsp;10.10.10.5) have each experienced
+      at least one Connectivity Loss event during the current test run</li>
+</ul>
+<p>
+  The user may also click <b>Stop</b> at any time to halt immediately.
+  In all cases, all connections (SSH and Pelco-D TCP) are closed cleanly on termination.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════ 5. EVENT LOG REFERENCE -->
+<h2 class="pb">5. Event Log Reference</h2>
+
+<table>
+  <tr><th>Source</th><th>Event Type</th><th>Description</th></tr>
+  <tr><td>PTZ</td><td>TCP Connected</td><td>Pelco-D TCP connection established</td></tr>
+  <tr><td>PTZ</td><td>TCP Failed</td><td>Pelco-D TCP connection could not be established</td></tr>
+  <tr><td>PTZ</td><td>Test Start</td><td>Test cycle loop has begun</td></tr>
+  <tr><td>PTZ</td><td>Position Reached</td><td>Move command completed; platform assumed at target</td></tr>
+  <tr><td>PTZ</td><td>Position Failure</td><td>Send error on socket &mdash; connection likely lost</td></tr>
+  <tr><td>PTZ</td><td>Cycle Complete</td><td>One full &minus;90&deg; / +90&deg; cycle finished</td></tr>
+  <tr><td>PTZ</td><td>Test Stop</td><td>Test loop has exited; reason shown in detail</td></tr>
+  <tr><td>SSH</td><td>SSH Connected</td><td>SSH session to GENE board established</td></tr>
+  <tr><td>SSH</td><td>SSH Failed</td><td>SSH connection failed; ping monitoring not active</td></tr>
+  <tr><td>10.10.10.X</td><td>Ping Loss</td><td>Missed ping reply (below connectivity threshold)</td></tr>
+  <tr><td>10.10.10.X</td><td>Connectivity Loss</td><td>5 consecutive missed replies &mdash; device offline</td></tr>
+  <tr><td>10.10.10.X</td><td>Connectivity Restored</td><td>Device responding again after a connectivity loss</td></tr>
+  <tr><td>10.10.10.X</td><td>Ping Restored</td><td>Device responding again after a minor ping loss</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ 6. EXPORTING DATA -->
+<h2>6. Exporting Log Data</h2>
+<p>
+  Click <b>Export</b> at any time during or after the test. A save dialog will appear.
+  Choose the output format:
+</p>
+<ul>
+  <li><b>CSV (.csv)</b> &mdash; plain comma-separated file, compatible with any spreadsheet application</li>
+  <li><b>Excel (.xlsx)</b> &mdash; formatted spreadsheet with column headers</li>
+</ul>
+<div class="note">
+  <b>Note:</b> The log is written continuously to a temporary file throughout the test.
+  If the application closes unexpectedly, the temporary file is preserved and can be
+  recovered manually from the system temp directory.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ 7. TROUBLESHOOTING -->
+<h2 class="pb">7. Troubleshooting</h2>
+
+<table>
+  <tr><th>Symptom</th><th>Likely Cause</th><th>Resolution</th></tr>
+  <tr>
+    <td>TCP Failed on start</td>
+    <td>PTZ controller unreachable on configured IP / port</td>
+    <td>Verify IP address and Pelco port (default 34010). Check network connectivity.</td>
+  </tr>
+  <tr>
+    <td>SSH Failed on start</td>
+    <td>GENE board unreachable, or incorrect credentials</td>
+    <td>Confirm IP, SSH port (22), username and password. Ensure board is powered and on the network.</td>
+  </tr>
+  <tr>
+    <td>Platform not moving</td>
+    <td>Incorrect Pelco address or port</td>
+    <td>Verify <code>Addr:</code> matches the camera's configured Pelco-D address. Confirm Pelco port.</td>
+  </tr>
+  <tr>
+    <td>All tiles show Connectivity Loss immediately</td>
+    <td>SSH connected but Moxa devices are genuinely offline, or ping path is blocked</td>
+    <td>Confirm 10.10.10.2&nbsp;&ndash;&nbsp;10.10.10.5 are reachable from the GENE board.</td>
+  </tr>
+  <tr>
+    <td>Test stops after first cycle</td>
+    <td>All four devices reached Connectivity Loss</td>
+    <td>Expected behaviour — the stop condition was triggered. Review event log for timing.</td>
+  </tr>
+  <tr>
+    <td>Export button greyed out</td>
+    <td>Test has not been started in this session</td>
+    <td>The Export button activates as soon as Start is pressed.</td>
+  </tr>
+  <tr>
+    <td>Build error: Access Denied on .exe</td>
+    <td>The application is still running when rebuilding</td>
+    <td>Close Tilt Tester Lite before running PyInstaller.</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ FOOTER NOTE -->
+<div class="note" style="margin-top:30px;">
+  <b>Support:</b> For issues or modifications, refer to the project source at
+  <code>C:\Users\GWXT86\Documents\Software\My Software\Projects\Tilt-Tester-Lite</code>.
+</div>
+
+</body>
+</html>

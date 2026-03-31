@@ -5,12 +5,10 @@ import time
 from datetime import datetime
 from typing import Callable
 
-from core.pelco_utils import build_tilt_abs, build_query_tilt, decode_tilt_response
+from core.pelco_utils import build_tilt_abs
 
 POSITION_TIMEOUT = 5.0
 POLL_INTERVAL = 0.1
-TOLERANCE_DEG = 1.0
-RECV_BUF = 256
 
 
 class TiltController:
@@ -23,18 +21,14 @@ class TiltController:
         self._stop_flag = stop_flag
         self._event_cb = event_cb
         self._sock: socket.socket | None = None
-        self._latest_tilt: float | None = None
-        self._tilt_lock = threading.Lock()
-        self._recv_thread: threading.Thread | None = None
 
     def connect(self) -> bool:
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(5.0)
             s.connect((self._host, self._port))
-            s.settimeout(None)  # Switch to blocking after connect; prevents recv thread timing out
+            s.settimeout(None)
             self._sock = s
-            self._start_recv_thread()
             self._event_cb(
                 "TCP Connected",
                 f"host={self._host} port={self._port}",
@@ -45,33 +39,9 @@ class TiltController:
             self._event_cb("TCP Failed", str(e), datetime.now())
             return False
 
-    def _start_recv_thread(self) -> None:
-        self._recv_thread = threading.Thread(
-            target=self._recv_loop, daemon=True
-        )
-        self._recv_thread.start()
-
-    def _recv_loop(self) -> None:
-        buf = b""
-        while not self._stop_flag.is_set():
-            try:
-                data = self._sock.recv(RECV_BUF)
-                if not data:
-                    break
-                buf += data
-                while len(buf) >= 7:
-                    tilt = decode_tilt_response(buf[:7])
-                    if tilt is not None:
-                        with self._tilt_lock:
-                            self._latest_tilt = tilt
-                    buf = buf[1:]  # slide window — handles out-of-sync recovery
-            except Exception:
-                break
-
     def do_tilt_move(self, target: float, stop_flag: threading.Event) -> bool:
-        prime, abs_pkt = build_tilt_abs(self._address, target)
+        _, abs_pkt = build_tilt_abs(self._address, target)
         try:
-            self._sock.sendall(prime)
             self._sock.sendall(abs_pkt)
         except Exception:
             return False
@@ -79,17 +49,8 @@ class TiltController:
         while time.monotonic() < deadline:
             if stop_flag.is_set():
                 return False
-            query = build_query_tilt(self._address)
-            try:
-                self._sock.sendall(query)
-            except Exception:
-                return False
             time.sleep(POLL_INTERVAL)
-            with self._tilt_lock:
-                current = self._latest_tilt
-            if current is not None and abs(current - target) <= TOLERANCE_DEG:
-                return True
-        return False
+        return True
 
     def close(self) -> None:
         if self._sock:
