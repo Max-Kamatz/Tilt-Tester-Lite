@@ -2,6 +2,7 @@
 import pytest
 from PyQt6.QtWidgets import QApplication
 from ui.device_tile import DeviceTile
+from ui.event_log import EventLog
 
 @pytest.fixture(scope="module")
 def app():
@@ -52,3 +53,32 @@ def test_device_tile_increment_connectivity_loss(app):
     tile.increment_connectivity_loss()
     tile.increment_connectivity_loss()
     assert tile._connectivity_loss_count == 2
+
+
+_ROW_DATA = ("2026-03-30 12:00:00.000", "PTZ", "Cycle Complete", "")
+
+def test_event_log_adds_row(app):
+    log = EventLog()
+    log.add_event(*_ROW_DATA)
+    assert log._table.rowCount() == 1
+
+
+def test_event_log_cap_at_10000(app):
+    log = EventLog()
+    for i in range(10_001):
+        log.add_event(f"ts_{i}", "PTZ", "Cycle Complete", "")
+    assert log._table.rowCount() == 10_000
+
+
+def test_event_log_colour_coded_row(app):
+    log = EventLog()
+    log.add_event("ts", "10.10.10.2", "Ping Loss", "")
+    item = log._table.item(0, 0)
+    assert item.background().color().name() == "#3d2a00"
+
+
+def test_event_log_clear(app):
+    log = EventLog()
+    log.add_event(*_ROW_DATA)
+    log.clear()
+    assert log._table.rowCount() == 0
