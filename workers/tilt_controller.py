@@ -32,6 +32,7 @@ class TiltController:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(5.0)
             s.connect((self._host, self._port))
+            s.settimeout(None)  # Switch to blocking after connect; prevents recv thread timing out
             self._sock = s
             self._start_recv_thread()
             self._event_cb(
@@ -51,22 +52,29 @@ class TiltController:
         self._recv_thread.start()
 
     def _recv_loop(self) -> None:
+        buf = b""
         while not self._stop_flag.is_set():
             try:
                 data = self._sock.recv(RECV_BUF)
                 if not data:
                     break
-                tilt = decode_tilt_response(data)
-                if tilt is not None:
-                    with self._tilt_lock:
-                        self._latest_tilt = tilt
+                buf += data
+                while len(buf) >= 7:
+                    tilt = decode_tilt_response(buf[:7])
+                    if tilt is not None:
+                        with self._tilt_lock:
+                            self._latest_tilt = tilt
+                    buf = buf[1:]  # slide window — handles out-of-sync recovery
             except Exception:
                 break
 
     def do_tilt_move(self, target: float, stop_flag: threading.Event) -> bool:
         prime, abs_pkt = build_tilt_abs(self._address, target)
-        self._sock.sendall(prime)
-        self._sock.sendall(abs_pkt)
+        try:
+            self._sock.sendall(prime)
+            self._sock.sendall(abs_pkt)
+        except Exception:
+            return False
         deadline = time.monotonic() + POSITION_TIMEOUT
         while time.monotonic() < deadline:
             if stop_flag.is_set():
