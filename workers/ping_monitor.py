@@ -9,22 +9,66 @@ DEVICES = ["10.10.10.2", "10.10.10.3", "10.10.10.4", "10.10.10.5"]
 _CONNECTIVITY_THRESHOLD = 5
 
 
+def probe_active_devices(host: str, port: int, username: str, password: str) -> list[str]:
+    """SSH to the GENE board and ping each device once (parallel channels).
+
+    Returns the subset of DEVICES that responded within ~2 s.
+    Falls back to all DEVICES if SSH cannot be established.
+    """
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        client.connect(host, port=port, username=username, password=password, timeout=10)
+    except Exception:
+        return list(DEVICES)
+
+    transport = client.get_transport()
+    if transport is None:
+        client.close()
+        return list(DEVICES)
+
+    results: dict[str, bool] = {}
+    lock = threading.Lock()
+
+    def _probe(ip: str) -> None:
+        try:
+            chan = transport.open_session()
+            chan.exec_command(f"ping -c 2 -W 1 {ip}")
+            output = chan.makefile("r").read()
+            chan.close()
+            with lock:
+                results[ip] = "bytes from" in output or "icmp_seq" in output
+        except Exception:
+            with lock:
+                results[ip] = False
+
+    threads = [threading.Thread(target=_probe, args=(ip,), daemon=True) for ip in DEVICES]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=5)
+    client.close()
+
+    return [ip for ip in DEVICES if results.get(ip, False)]
+
+
 class PingMonitor(QThread):
     ping_loss_event = pyqtSignal(str, str, object)   # ip, event_type, timestamp
     connection_event = pyqtSignal(str, str, object)  # event_type, detail, timestamp
 
     def __init__(self, host: str, port: int, username: str, password: str,
-                 stop_flag: threading.Event, parent=None):
+                 stop_flag: threading.Event, devices: list[str], parent=None):
         super().__init__(parent)
         self._host = host
         self._port = port
         self._username = username
         self._password = password
         self._stop_flag = stop_flag
-        self._consecutive: dict[str, int] = {ip: 0 for ip in DEVICES}
+        self._devices = devices
+        self._consecutive: dict[str, int] = {ip: 0 for ip in devices}
         # sticky flag: once True it never resets; recovery after connectivity loss
         # always emits Connectivity Restored, never Ping Restored
-        self._ever_loss: dict[str, bool] = {ip: False for ip in DEVICES}
+        self._ever_loss: dict[str, bool] = {ip: False for ip in devices}
         self._ssh: paramiko.SSHClient | None = None
 
     def _connect_ssh(self, host: str, port: int,
@@ -90,7 +134,7 @@ class PingMonitor(QThread):
         parsers: list[threading.Thread] = []
         try:
             # Each parser thread is pinned to a unique IP key; no cross-thread key contention.
-            for ip in DEVICES:
+            for ip in self._devices:
                 chan = transport.open_session()
                 # Use getattr to call exec_command via a local reference
                 exec_fn = getattr(chan, "exec_command")

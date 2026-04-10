@@ -7,6 +7,7 @@ _STATUS_COLOURS = {
     "Ping Loss": ("#3d2a00", "#ffaa00"),
     "Connectivity Loss": ("#3d0a0a", "#ff6666"),
     "Connectivity Restored": ("#1a0d3d", "#cc88ff"),
+    "Not Present": ("#161b22", "#555e6b"),
 }
 
 

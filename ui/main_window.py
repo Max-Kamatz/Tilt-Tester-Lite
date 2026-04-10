@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
 from logger.test_logger import TestLogger
 from ui.device_tile import DeviceTile
 from ui.event_log import EventLog
-from workers.ping_monitor import PingMonitor, DEVICES
+from workers.ping_monitor import PingMonitor, DEVICES, probe_active_devices
 from workers.test_orchestrator import TestOrchestrator
 
 _STYLE = """
@@ -33,6 +33,7 @@ class MainWindow(QMainWindow):
         self._ping_monitor: PingMonitor | None = None
         self._orchestrator: TestOrchestrator | None = None
         self._ever_connectivity_loss: set[str] = set()
+        self._active_devices: list[str] = list(DEVICES)
         self._build_ui()
 
     # ── UI Construction ──────────────────────────────────────────────
@@ -105,6 +106,17 @@ class MainWindow(QMainWindow):
         for tile in self._tiles.values():
             tile.reset()
         self._event_log.clear()
+
+        self._status_label.setText("Probing devices...")
+        QApplication.processEvents()
+        self._active_devices = probe_active_devices(
+            self._ip_field.text(), self._ssh_port.value(),
+            self._ssh_user.text(), self._ssh_pass.text(),
+        )
+        for ip, tile in self._tiles.items():
+            if ip not in self._active_devices:
+                tile.set_status("Not Present")
+
         self._logger.start()
         self._btn_start.setEnabled(False)
         self._btn_stop.setEnabled(True)
@@ -138,7 +150,7 @@ class MainWindow(QMainWindow):
         self._ping_monitor = PingMonitor(
             self._ip_field.text(), self._ssh_port.value(),
             self._ssh_user.text(), self._ssh_pass.text(),
-            self._stop_flag,
+            self._stop_flag, self._active_devices,
         )
         self._ping_monitor.ping_loss_event.connect(self._on_ping_loss_event)
         self._ping_monitor.connection_event.connect(self._on_connection_event)
@@ -168,7 +180,7 @@ class MainWindow(QMainWindow):
                 tile.set_status("Connectivity Loss")
                 tile.increment_connectivity_loss()
                 self._ever_connectivity_loss.add(ip)
-                if self._ever_connectivity_loss.issuperset(set(DEVICES)):
+                if self._ever_connectivity_loss.issuperset(set(self._active_devices)):
                     self._stop_flag.set()
             elif event_type == "Ping Restored":
                 tile.set_status("OK")
